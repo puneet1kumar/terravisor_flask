@@ -1,0 +1,8 @@
+<!doctype html>
+<title>Upload New Plan</title>
+<h1>Upload new Plan</h1>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<form method=post enctype=multipart/form-data action="/upload">
+  <input type=file name=file>
+  <input type=submit value=Upload>
+</form>
