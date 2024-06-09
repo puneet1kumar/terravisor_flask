@@ -1,25 +1,31 @@
 import json
-from parserplan import parse_plan
+from analyzer import analyze_plan
 
-def analyze_plan(file_path):
-    analysis = parse_plan(file_path)
+def generate_report(analysis_report):
+    report = []
+    report.append("Terraform Plan Analysis Report")
+    report.append("==============================")
     
-    total_resources = analysis['total_resources']
-    created_resources = len(analysis['create'])
-    updated_resources = len(analysis['update'])
-    deleted_resources = len(analysis['delete'])
+    report.append(f"Total Resources: {analysis_report['Total Resources']}")
+    report.append(f"Resources to be Created: {analysis_report['Resources to be Created']}")
+    report.append(f"Resources to be Updated: {analysis_report['Resources to be Updated']}")
+    report.append(f"Resources to be Deleted: {analysis_report['Resources to be Deleted']}")
     
-    report = {
-        'Total Resources': total_resources,
-        'Resources to be Created': created_resources,
-        'Resources to be Updated': updated_resources,
-        'Resources to be Deleted': deleted_resources,
-        'Detailed Changes': analysis
-    }
+    report.append("\nDetailed Changes:")
+    for change_type, resources in analysis_report['Detailed Changes'].items():
+        if change_type != 'total_resources':
+            report.append(f"\n{change_type.capitalize()}: {len(resources)}")
+            for resource in resources:
+                report.append(f"  - {resource['address']}")
     
-    return report
+    return "\n".join(report)
 
 if __name__ == '__main__':
     plan_file = 'plan.json'
     analysis_report = analyze_plan(plan_file)
-    print(json.dumps(analysis_report, indent=4))
+    detailed_report = generate_report(analysis_report)
+    
+    with open('analysis_report.txt', 'w') as file:
+        file.write(detailed_report)
+    
+    print("Detailed report generated: analysis_report.txt")
