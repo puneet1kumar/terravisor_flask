@@ -10,14 +10,14 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f8f9fa;
+            background-color: #f0c6b7;
         }
         .container {
             background: #fff;
-            padding: 30px;
+            padding: 15px;
             border-radius: 15px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            margin-top: 50px;
+            box-shadow: 0 0 20px rgba(188, 8, 8, 0.1);
+            margin-top: 25px;
         }
         .summary p {
             font-size: 18px;
@@ -38,7 +38,7 @@
         }
         .toggle-btn {
             cursor: pointer;
-            color: #007bff;
+            color: #040c16;
         }
         .toggle-btn:hover {
             text-decoration: underline;
@@ -47,6 +47,21 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+        .mb-4 {
+            align-items: center;
+            color: #040b64;
+            box-shadow: 0 0 30px rgba(188, 8, 8, 0.1);
+            background: #fff;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .mb-3 {
+            color: #040b64;
+            box-shadow: 0 0 30px rgba(188, 8, 8, 0.1);
+            background: #fff;
+            padding: 5px;
+            border-radius: 5px;
         }
         @keyframes fadeIn {
             from { opacity: 0; }
@@ -72,7 +87,7 @@
                         <div class="card-header">
                             <h3 class="m-0">{{ change_type.capitalize() }}: {{ resources|length }}</h3>
                             <button class="btn btn-sm btn-info toggle-btn" onclick="toggleResources('{{ change_type }}')">
-                                <i class="fas fa-chevron-down"></i> Show/Hide
+                                <i class="fas fa-chevron-down"></i> <b>Show/Hide</b>
                             </button>
                         </div>
                         <ul class="resources list-group list-group-flush" id="{{ change_type }}">
