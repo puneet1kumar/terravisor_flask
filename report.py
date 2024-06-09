@@ -1,19 +1,31 @@
-from jinja2 import Template
+import json
+from analyzer import analyze_plan
 
-REPORT_TEMPLATE ="""<h1> Terraform Plan Summary</h1>
-{% for action, resources in summary.items() %}
-<h2>{{action.capitalize() }}</h2>
-<ul>
-{% for resource in resources %}
-<li>{{resource['type']}}.{{resource['name']}}({{resource['address']}})</1i>
-{% endfor %}
-</ul>
-{% endfor %}
-"""
-
-def generate_report(summary: dict, output_file: str):
-    template = Template(REPORT_TEMPLATE)
-    report_html = template.render(summary=summary)
+def generate_report(analysis_report):
+    report = []
+    report.append("Terraform Plan Analysis Report")
+    report.append("==============================")
     
-    with open(output_file, "w") as f:
-        f.write(report_html)
+    report.append(f"Total Resources: {analysis_report['Total Resources']}")
+    report.append(f"Resources to be Created: {analysis_report['Resources to be Created']}")
+    report.append(f"Resources to be Updated: {analysis_report['Resources to be Updated']}")
+    report.append(f"Resources to be Deleted: {analysis_report['Resources to be Deleted']}")
+    
+    report.append("\nDetailed Changes:")
+    for change_type, resources in analysis_report['Detailed Changes'].items():
+        if change_type != 'total_resources':
+            report.append(f"\n{change_type.capitalize()}: {len(resources)}")
+            for resource in resources:
+                report.append(f"  - {resource['address']}")
+    
+    return "\n".join(report)
+
+if __name__ == '__main__':
+    plan_file = 'plan.json'
+    analysis_report = analyze_plan(plan_file)
+    detailed_report = generate_report(analysis_report)
+    
+    with open('analysis_report.txt', 'w') as file:
+        file.write(detailed_report)
+    
+    print("Detailed report generated: analysis_report.txt")

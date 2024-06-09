@@ -1,24 +1,25 @@
-def analyze_plan(plan: dict) -> dict:
-    resource_changes = plan.get("resource_changes", [])
-    summary = {"create": [], "update": [], "delete": [], "replace": []}
+import json
+from parserplan import parse_plan
 
-    for change in resource_changes:
-        actions = change.get("change", ).get("actions", [])
-        resource ={ "address": change.get("address"), "type": change.get("type"), "name": change.get("name"), "actions": actions}
-        
-        if "create" in actions:
-            summary["create"].append (resource)
-        if "update" in actions:
-            summary["update"]. append(resource)
-        if "delete" in actions:
-            summary["delete"]. append(resource)
-        if "replace" in actions:
-            summary[ "replace"]. append(resource)
-    print(summary)
-    for action, resources in summary.items():
-        print("ACTION:", action.capitalize(), ":")
-        for resource in resources:
-            print("Type:", resource['type'],"====== Resource", resource['name'],"======= Address", resource['address'])
-        print()
-        print()
-    return summary
+def analyze_plan(file_path):
+    analysis = parse_plan(file_path)
+    
+    total_resources = analysis['total_resources']
+    created_resources = len(analysis['create'])
+    updated_resources = len(analysis['update'])
+    deleted_resources = len(analysis['delete'])
+    
+    report = {
+        'Total Resources': total_resources,
+        'Resources to be Created': created_resources,
+        'Resources to be Updated': updated_resources,
+        'Resources to be Deleted': deleted_resources,
+        'Detailed Changes': analysis
+    }
+    
+    return report
+
+if __name__ == '__main__':
+    plan_file = 'plan.json'
+    analysis_report = analyze_plan(plan_file)
+    print(json.dumps(analysis_report, indent=4))
