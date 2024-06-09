@@ -1,25 +1,25 @@
-from flask import Flask, render_template, request
-from analyzer import analyze_plan
+import json
+from parserplan import parse_plan
 
-app = Flask(__name__)
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/analyze', methods=['POST'])
-def analyze():
-    if 'plan' not in request.files:
-        return "No file part"
+def analyze_plan(file_path):
+    analysis = parse_plan(file_path)
     
-    file = request.files['plan']
-    if file.filename == '':
-        return "No selected file"
+    total_resources = analysis['total_resources']
+    created_resources = len(analysis['create'])
+    updated_resources = len(analysis['update'])
+    deleted_resources = len(analysis['delete'])
     
-    file.save('plan.json')
-    analysis_report = analyze_plan('plan.json')
+    report = {
+        'Total Resources': total_resources,
+        'Resources to be Created': created_resources,
+        'Resources to be Updated': updated_resources,
+        'Resources to be Deleted': deleted_resources,
+        'Detailed Changes': analysis
+    }
     
-    return render_template('report.html', report=analysis_report)
+    return report
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    plan_file = 'plan.json'
+    analysis_report = analyze_plan(plan_file)
+    print(json.dumps(analysis_report, indent=4))
