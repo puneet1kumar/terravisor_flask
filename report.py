@@ -8,13 +8,17 @@ def generate_report(analysis_report):
     
     report.append(f"Total Resources: {analysis_report['Total Resources']}")
     report.append(f"Resources to be Created: {analysis_report['Resources to be Created']}")
+    report.append(f"Resources to be Read: {analysis_report['Resources to be Read']}")
     report.append(f"Resources to be Updated: {analysis_report['Resources to be Updated']}")
     report.append(f"Resources to be Deleted: {analysis_report['Resources to be Deleted']}")
+    report.append(f"No Operation Resources: {analysis_report['No Operation Resources']}")
+    report.append(f"Resources with Delete and Create: {analysis_report['Resources with Delete and Create']}")
+    report.append(f"Resources with Create and Delete: {analysis_report['Resources with Create and Delete']}")
     
     report.append("\nDetailed Changes:")
     for change_type, resources in analysis_report['Detailed Changes'].items():
         if change_type != 'total_resources':
-            report.append(f"\n{change_type.capitalize()}: {len(resources)}")
+            report.append(f"\n{change_type.replace('_', ' ').capitalize()}: {len(resources)}")
             for resource in resources:
                 report.append(f"  - {resource['address']}")
     

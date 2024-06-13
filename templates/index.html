@@ -32,7 +32,7 @@
         input[type="file"] {
             display: none;
         }
-        label.upload-btn {
+        label.upload-btn, label.git-url-btn {
             display: inline-block;
             cursor: pointer;
             background-color: #4CAF50;
@@ -40,6 +40,7 @@
             padding: 10px 20px;
             border-radius: 5px;
             transition: background-color 0.3s;
+            margin: 5px;
         }
         .mb-4 {
             align-items: center;
@@ -49,7 +50,7 @@
             padding: 5px;
             border-radius: 5px;
         }
-        label.upload-btn:hover {
+        label.upload-btn:hover, label.git-url-btn:hover {
             background-color: #45a049;
         }
         button[type="submit"] {
@@ -64,8 +65,11 @@
         button[type="submit"]:hover {
             background-color: #005f7f;
         }
-        .selected-file {
+        .selected-file, .git-url-input {
             margin-top: 10px;
+        }
+        .git-url-input {
+            display: none;
         }
     </style>
 </head>
@@ -74,8 +78,13 @@
         <h1 class="text-center mb-4">Terraform Plan Analyzer</h1>
         <form method="POST" action="/analyze" enctype="multipart/form-data">
             <label for="plan" class="upload-btn">Choose a Terraform Plan</label>
-            <input type="file" id="plan" name="plan" required onchange="updateFileName(this)">
+            <input type="file" id="plan" name="plan" onchange="updateFileName(this)">
             <div id="file-selected" class="selected-file"></div>
+            <br>
+            <label class="git-url-btn" onclick="toggleGitUrlInput()">Enter Git URL</label>
+            <input type="text" id="git-url" name="git_url" class="form-control git-url-input">
+            <div id="git-url-input" class="git-url-input"></div>
+            <br>
             <button type="submit">Analyze</button>
         </form>
     </div>
@@ -84,7 +93,18 @@
         function updateFileName(input) {
             if (input.files.length > 0) {
                 document.getElementById('file-selected').innerText = 'Selected file: ' + input.files[0].name;
+                document.getElementById('git-url').value = '';
+                document.getElementById('git-url').style.display = 'none';
             } else {
+                document.getElementById('file-selected').innerText = '';
+            }
+        }
+
+        function toggleGitUrlInput() {
+            var gitUrlInput = document.getElementById('git-url');
+            gitUrlInput.style.display = gitUrlInput.style.display === 'none' || gitUrlInput.style.display === '' ? 'block' : 'none';
+            if (gitUrlInput.style.display === 'block') {
+                document.getElementById('plan').value = '';
                 document.getElementById('file-selected').innerText = '';
             }
         }

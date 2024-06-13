@@ -26,11 +26,23 @@
         .create {
             color: #28a745;
         }
+        .read {
+            color: #17a2b8;
+        }
         .update {
             color: #ffc107;
         }
         .delete {
             color: #dc3545;
+        }
+        .no-op {
+            color: #6c757d;
+        }
+        .delete_create {
+            color: #e83e8c;
+        }
+        .create_delete {
+            color: #fd7e14;
         }
         .resources {
             display: none;
@@ -75,8 +87,12 @@
         <div class="summary mb-4">
             <p>Total Resources: <strong>{{ report['Total Resources'] }}</strong></p>
             <p>Resources to be Created: <span class="create">{{ report['Resources to be Created'] }}</span></p>
+            <p>Resources to be Read: <span class="read">{{ report['Resources to be Read'] }}</span></p>
             <p>Resources to be Updated: <span class="update">{{ report['Resources to be Updated'] }}</span></p>
             <p>Resources to be Deleted: <span class="delete">{{ report['Resources to be Deleted'] }}</span></p>
+            <p>No Operation Resources: <span class="no-op">{{ report['No Operation Resources'] }}</span></p>
+            <p>Resources with Delete and Create: <span class="delete_create">{{ report['Resources with Delete and Create'] }}</span></p>
+            <p>Resources with Create and Delete: <span class="create_delete">{{ report['Resources with Create and Delete'] }}</span></p>
         </div>
 
         <div class="details">
@@ -85,7 +101,7 @@
                 {% if change_type != 'total_resources' %}
                     <div class="card mb-3">
                         <div class="card-header">
-                            <h3 class="m-0">{{ change_type.capitalize() }}: {{ resources|length }}</h3>
+                            <h3 class="m-0">{{ change_type.replace('_', ' ').capitalize() }}: {{ resources|length }}</h3>
                             <button class="btn btn-sm btn-info toggle-btn" onclick="toggleResources('{{ change_type }}')">
                                 <i class="fas fa-chevron-down"></i> <b>Show/Hide</b>
                             </button>
@@ -93,7 +109,7 @@
                         <ul class="resources list-group list-group-flush" id="{{ change_type }}">
                             {% for resource in resources %}
                                 <li class="list-group-item {{ change_type }}">
-                                    <i class="fas fa-{{ 'plus-circle' if change_type == 'create' else 'edit' if change_type == 'update' else 'trash-alt' }}"></i>
+                                    <i class="fas fa-{{ 'plus-circle' if change_type == 'create' else 'book' if change_type == 'read' else 'edit' if change_type == 'update' else 'trash-alt' if change_type == 'delete' else 'sync' if change_type == 'delete_create' else 'exchange-alt' if change_type == 'create_delete' else 'minus-circle' }}"></i>
                                     {{ resource['address'] }}
                                 </li>
                             {% endfor %}
