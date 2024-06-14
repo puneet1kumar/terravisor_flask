@@ -1,25 +1,36 @@
-from flask import Flask, render_template, request
-from analyzer import analyze_plan
+import json
 
-app = Flask(__name__)
+def parse_plan(file_path):
+    with open(file_path, 'r') as file:
+        data = json.load(file)
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+    resources = data.get('resource_changes', [])
+    analysis = {
+        'no-op': [],
+        'create': [],
+        'read': [],
+        'update': [],
+        'delete': [],
+        'delete_create': [],  # This is for ["delete", "create"]
+        'create_delete': [],  # This is for ["create", "delete"]
+        'total_resources': len(resources)
+    }
 
-@app.route('/analyze', methods=['POST'])
-def analyze():
-    if 'plan' not in request.files:
-        return "No file part"
-    
-    file = request.files['plan']
-    if file.filename == '':
-        return "No selected file"
-    
-    file.save('plan.json')
-    analysis_report = analyze_plan('plan.json')
-    
-    return render_template('report.html', report=analysis_report)
+    for resource in resources:
+        change = resource['change']['actions']
+        if change == ["no-op"]:
+            analysis['no-op'].append(resource)
+        elif change == ["create"]:
+            analysis['create'].append(resource)
+        elif change == ["read"]:
+            analysis['read'].append(resource)
+        elif change == ["update"]:
+            analysis['update'].append(resource)
+        elif change == ["delete"]:
+            analysis['delete'].append(resource)
+        elif change == ["delete", "create"]:
+            analysis['delete_create'].append(resource)
+        elif change == ["create", "delete"]:
+            analysis['create_delete'].append(resource)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    return analysis
