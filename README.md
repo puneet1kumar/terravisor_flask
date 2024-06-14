@@ -1,36 +1,33 @@
 import json
+from parserplan import parse_plan
 
-def parse_plan(file_path):
-    with open(file_path, 'r') as file:
-        data = json.load(file)
-
-    resources = data.get('resource_changes', [])
-    analysis = {
-        'no-op': [],
-        'create': [],
-        'read': [],
-        'update': [],
-        'delete': [],
-        'delete_create': [],  # This is for ["delete", "create"]
-        'create_delete': [],  # This is for ["create", "delete"]
-        'total_resources': len(resources)
+def analyze_plan(file_path):
+    analysis = parse_plan(file_path)
+    
+    total_resources = analysis['total_resources']
+    created_resources = len(analysis['create'])
+    read_resources = len(analysis['read'])
+    updated_resources = len(analysis['update'])
+    deleted_resources = len(analysis['delete'])
+    no_op_resources = len(analysis['no-op'])
+    delete_create_resources = len(analysis['delete_create'])
+    create_delete_resources = len(analysis['create_delete'])
+    
+    report = {
+        'Total Resources': total_resources,
+        'Resources to be Created': created_resources,
+        'Resources to be Read': read_resources,
+        'Resources to be Updated': updated_resources,
+        'Resources to be Deleted': deleted_resources,
+        'No Operation Resources': no_op_resources,
+        'Resources with Delete and Create': delete_create_resources,
+        'Resources with Create and Delete': create_delete_resources,
+        'Detailed Changes': analysis
     }
+    
+    return report
 
-    for resource in resources:
-        change = resource['change']['actions']
-        if change == ["no-op"]:
-            analysis['no-op'].append(resource)
-        elif change == ["create"]:
-            analysis['create'].append(resource)
-        elif change == ["read"]:
-            analysis['read'].append(resource)
-        elif change == ["update"]:
-            analysis['update'].append(resource)
-        elif change == ["delete"]:
-            analysis['delete'].append(resource)
-        elif change == ["delete", "create"]:
-            analysis['delete_create'].append(resource)
-        elif change == ["create", "delete"]:
-            analysis['create_delete'].append(resource)
-
-    return analysis
+if __name__ == '__main__':
+    plan_file = 'plan.json'
+    analysis_report = analyze_plan(plan_file)
+    print(json.dumps(analysis_report, indent=4))
