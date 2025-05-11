@@ -1,113 +1,146 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory
-import threading
-import time
-import pandas as pd
-import requests
-import datetime
-import os
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HSI Smart Trader</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
+    h1 { color: #333; }
+    #controls { margin-bottom: 20px; }
+    button { margin-right: 10px; padding: 10px 20px; font-size: 16px; }
+    #metrics { margin-top: 20px; font-size: 18px; }
+    canvas { max-width: 100%; margin-top: 20px; }
+    #summaryPopup { display: none; background: #fff; padding: 20px; border: 2px solid #444; position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%); z-index: 999; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
+    #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 998; }
+  </style>
+</head>
+<body>
+  <h1>Hang Seng Index Smart Trader</h1>
+  <div id="controls">
+    <button onclick="startSimulation()">Start Simulation</button>
+    <button onclick="startLive()">Start Live Trading</button>
+    <button onclick="downloadCSV()">Download Log CSV</button>
+  </div>
+  <div id="metrics">
+    <p><strong>Units Left:</strong> <span id="unitsLeft">100</span></p>
+    <p><strong>Revenue:</strong> <span id="revenue">0.00</span></p>
+  </div>
+  <canvas id="revenueChart" height="100"></canvas>
+  <canvas id="priceChart" height="100"></canvas>
 
-app = Flask(__name__, static_folder='static', template_folder='templates')
+  <div id="overlay"></div>
+  <div id="summaryPopup">
+    <h2>Trading Session Summary</h2>
+    <p><strong>Total Revenue:</strong> <span id="finalRevenue"></span></p>
+    <p><strong>Units Sold:</strong> <span id="finalUnits"></span></p>
+    <button onclick="closePopup()">Close</button>
+  </div>
 
-# CONFIG
-TOTAL_UNITS = 100
-UNITS_LEFT = TOTAL_UNITS
-REVENUE = 0.0
-TRADE_INTERVAL = 2  # seconds
-TRADE_DURATION = 10 * 60  # 10 minutes
-SELL_ENDPOINT = "https://api.example.com/sell"
-PRICE_ENDPOINT = "https://api.example.com/live_price"
+  <script>
+    let revenueChart, priceChart;
+    let revenueData = [];
+    let priceData = [];
+    let labels = [];
+    let latestLog = [];
+    let tradingCompleted = false;
 
-# For simulation
-historical_df = pd.DataFrame(columns=['datetime', 'current_value'])  # placeholder for real CSV load
-try:
-    historical_df = pd.read_csv("historical_data.csv")
-    historical_df['datetime'] = pd.to_datetime(historical_df['datetime'])
-except FileNotFoundError:
-    pass
+    function initCharts() {
+      const ctx1 = document.getElementById('revenueChart').getContext('2d');
+      revenueChart = new Chart(ctx1, {
+        type: 'line',
+        data: { labels: [], datasets: [{ label: 'Revenue', data: [], fill: false, borderColor: 'green' }] },
+        options: { responsive: true }
+      });
 
-# Globals for live tracking
-live_data = []
-sell_log = []
-start_time = None
+      const ctx2 = document.getElementById('priceChart').getContext('2d');
+      priceChart = new Chart(ctx2, {
+        type: 'line',
+        data: { labels: [], datasets: [{ label: 'Price', data: [], fill: false, borderColor: 'blue' }] },
+        options: { responsive: true }
+      });
+    }
 
-def decide_units_to_sell(current_price, avg_price, units_left):
-    if current_price > avg_price * 1.01:
-        return min(10, units_left)
-    elif current_price > avg_price:
-        return min(5, units_left)
-    elif current_price > avg_price * 0.99:
-        return min(2, units_left)
-    return 0
+    function updateCharts(log) {
+      latestLog = log;
+      revenueData = log.map(e => e.revenue);
+      priceData = log.map(e => e.price);
+      labels = log.map(e => e.time);
 
-def simulate_trading():
-    global UNITS_LEFT, REVENUE, sell_log
-    UNITS_LEFT = TOTAL_UNITS
-    REVENUE = 0.0
-    sell_log = []
+      revenueChart.data.labels = labels;
+      revenueChart.data.datasets[0].data = revenueData;
+      revenueChart.update();
 
-    avg_price = historical_df['current_value'].mean()
-    for i in range(min(len(historical_df), TRADE_DURATION // TRADE_INTERVAL)):
-        row = historical_df.iloc[i]
-        price = row['current_value']
-        units_to_sell = decide_units_to_sell(price, avg_price, UNITS_LEFT)
-        UNITS_LEFT -= units_to_sell
-        REVENUE += units_to_sell * price
-        sell_log.append({"time": row['datetime'].strftime('%H:%M:%S'), "price": price, "units": units_to_sell, "revenue": REVENUE})
-        if UNITS_LEFT <= 0:
-            break
-        time.sleep(TRADE_INTERVAL)
+      priceChart.data.labels = labels;
+      priceChart.data.datasets[0].data = priceData;
+      priceChart.update();
+    }
 
-def live_trading():
-    global UNITS_LEFT, REVENUE, start_time, sell_log
-    UNITS_LEFT = TOTAL_UNITS
-    REVENUE = 0.0
-    sell_log = []
-    start_time = datetime.datetime.now()
-    avg_price = 0.0
-    prices = []
+    function pollStatus() {
+      fetch('/status')
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('unitsLeft').innerText = data.units_left;
+          document.getElementById('revenue').innerText = data.revenue.toFixed(2);
+          updateCharts(data.sell_log);
 
-    while (datetime.datetime.now() - start_time).total_seconds() < TRADE_DURATION and UNITS_LEFT > 0:
-        try:
-            res = requests.get(PRICE_ENDPOINT)
-            data = res.json()
-            price = data["current_value"]
-            prices.append(price)
-            avg_price = sum(prices) / len(prices)
+          if (!tradingCompleted && data.units_left === 0) {
+            showSummary(data.revenue, 100);
+            tradingCompleted = true;
+          }
+        });
+    }
 
-            units_to_sell = decide_units_to_sell(price, avg_price, UNITS_LEFT)
-            if units_to_sell > 0:
-                sell_payload = {"units": units_to_sell}
-                requests.post(SELL_ENDPOINT, json=sell_payload)
-                UNITS_LEFT -= units_to_sell
-                REVENUE += units_to_sell * price
-                sell_log.append({"time": datetime.datetime.now().strftime('%H:%M:%S'), "price": price, "units": units_to_sell, "revenue": REVENUE})
-        except Exception as e:
-            print("Error during trading:", e)
-        time.sleep(TRADE_INTERVAL)
+    function startSimulation() {
+      fetch('/start_simulation')
+        .then(res => res.json())
+        .then(data => {
+          console.log(data.status);
+          tradingCompleted = false;
+        });
+    }
 
-@app.route("/")
-def index():
-    return render_template("index.html")
+    function startLive() {
+      fetch('/start_live')
+        .then(res => res.json())
+        .then(data => {
+          console.log(data.status);
+          tradingCompleted = false;
+        });
+    }
 
-@app.route("/start_simulation")
-def start_simulation():
-    threading.Thread(target=simulate_trading).start()
-    return jsonify({"status": "Simulation started"})
+    function downloadCSV() {
+      if (!latestLog.length) return;
+      let csv = 'Time,Price,Units Sold,Revenue\n';
+      latestLog.forEach(row => {
+        csv += `${row.time},${row.price},${row.units},${row.revenue}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('hidden', '');
+      a.setAttribute('href', url);
+      a.setAttribute('download', 'trading_log.csv');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
 
-@app.route("/start_live")
-def start_live():
-    threading.Thread(target=live_trading).start()
-    return jsonify({"status": "Live trading started"})
+    function showSummary(revenue, unitsSold) {
+      document.getElementById('finalRevenue').innerText = revenue.toFixed(2);
+      document.getElementById('finalUnits').innerText = unitsSold;
+      document.getElementById('overlay').style.display = 'block';
+      document.getElementById('summaryPopup').style.display = 'block';
+    }
 
-@app.route("/status")
-def status():
-    return jsonify({"units_left": UNITS_LEFT, "revenue": REVENUE, "sell_log": sell_log})
+    function closePopup() {
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('summaryPopup').style.display = 'none';
+    }
 
-@app.route('/static/<path:filename>')
-def serve_static(filename):
-    return send_from_directory(app.static_folder, filename)
-
-if __name__ == '__main__':
-    os.makedirs("templates", exist_ok=True)
-    os.makedirs("static", exist_ok=True)
-    app.run(debug=True)
+    initCharts();
+    setInterval(pollStatus, 2000);
+  </script>
+</body>
+</html>
